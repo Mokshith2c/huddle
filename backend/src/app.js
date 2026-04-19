@@ -51,6 +51,7 @@ const start = async() => {
     server.listen(app.get("port"), ()=>{
         console.log("Listening on port 8080");
     })
+    console.log("ENV FRONTEND_URL:", process.env.FRONTEND_URL);
 }
 
 start();

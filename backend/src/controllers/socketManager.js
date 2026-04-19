@@ -71,9 +71,11 @@ let roomStartTimes = {}
 export const connectToSocket = (server) => {
     const io = new Server(server, {
         cors: {
-            origin: "*",
+            origin: [
+                process.env.FRONTEND_URL,
+                process.env.FRONTEND_TEST_URL
+            ],
             methods: ['GET', 'POST'],
-            allowedHeaders: ['*'],
             credentials: true
         }
     });
