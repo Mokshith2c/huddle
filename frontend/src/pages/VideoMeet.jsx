@@ -493,7 +493,16 @@ function VideoMeetComponent() {
     }
 
     const toggleAudioBtn = () => {
-        setAudio(prev => !prev);
+        setAudio((prev) => {
+            const newState = !prev;
+            const audioTracks = window.localStream?.getAudioTracks?.() || [];
+
+            audioTracks.forEach((track) => {
+                track.enabled = newState; // true = unmute, false = mute
+            });
+
+            return newState;
+        });
     }
 
     const toggleVideoBtn = () => {
