@@ -32,6 +32,7 @@ function VideoMeetComponent() {
     var localVideoRef = useRef();
     const videoRef = useRef([]);
     const isSwitchingStreamRef = useRef(false);
+    const showModalRef = useRef(false);
 
 
 
@@ -217,11 +218,6 @@ function VideoMeetComponent() {
         }
     };
 
-    // if(isChrome() === false){
-
-    // }
-
-
     const getPermissions = async () => {
         let isVideoAvailable = false;
         let isAudioAvailable = false;
@@ -332,6 +328,10 @@ function VideoMeetComponent() {
     }, [video, screen]);
 
     useEffect(() => {
+        showModalRef.current = showModal;
+    }, [showModal]);
+
+    useEffect(() => {
         return () => {
             Object.values(connections).forEach((connection) => {
                 try {
@@ -412,7 +412,7 @@ function VideoMeetComponent() {
             ...prevMessages,
             { sender: sender, data: data }
         ])
-        if (!showModal && socketIdSender !== socketIdRef.current) {
+        if (!showModalRef.current && socketIdSender !== socketIdRef.current) {
             setNewMessages((prevMessages) => prevMessages + 1);
         }
     }
@@ -629,7 +629,6 @@ function VideoMeetComponent() {
             return;
         }
 
-        // Guard against early clicks before the socket is ready.
         if (!socket || !socket.connected) {
             return;
         }
@@ -767,7 +766,7 @@ function VideoMeetComponent() {
                                                     if (!ref) return;
 
                                                     if (!isVideoOn) {
-                                                        ref.srcObject = null;   // ⭐ THIS FIXES YOUR ISSUE
+                                                        ref.srcObject = null;  
                                                         return;
                                                     }
 
