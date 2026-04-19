@@ -1,0 +1,60 @@
+@reference "tailwindcss";
+
+
+.logout-btn {
+	@apply px-5 py-2 rounded-lg font-semibold text-white
+		   bg-cyan-600
+              border border-cyan-500/40
+
+		   transition-all duration-300
+		   hover:shadow-[0_0_15px_rgba(34,211,238,0.6)]
+		   hover:scale-105 active:scale-95;
+}
+
+.createmeet-btn {
+	@apply px-5 rounded-lg font-semibold text-white
+		   bg-cyan-600
+              border border-cyan-500/40
+
+		   transition-all duration-300
+		   hover:shadow-[0_0_15px_rgba(34,211,238,0.6)]
+		   hover:scale-105 active:scale-95;
+}
+
+.joinmeet-btn{
+    @apply inline-block  px-6 py-3 rounded-lg font-semibold text-white
+		   border border-cyan-500/40 bg-black/40 backdrop-blur-md
+		   transition-all duration-300
+		   hover:border-cyan-400
+		   hover:shadow-[0_0_20px_rgba(34,211,238,0.6)]
+		   hover:scale-105 active:scale-95;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+	.logout-btn {
+		@apply px-3 py-2 text-sm;
+	}
+
+	.createmeet-btn {
+		@apply px-4 py-2.5 text-sm;
+	}
+
+	.joinmeet-btn {
+		@apply px-4 py-2.5 text-sm;
+	}
+}
+
+@media (max-width: 480px) {
+	.logout-btn {
+		@apply px-2 py-1.5 text-xs;
+	}
+
+	.createmeet-btn {
+		@apply px-3 py-2 text-xs;
+	}
+
+	.joinmeet-btn {
+		@apply px-3 py-2 text-xs;
+	}
+}

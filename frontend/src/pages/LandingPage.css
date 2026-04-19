@@ -1,0 +1,81 @@
+@reference "tailwindcss";
+
+*{
+	font-family: "Baloo 2", cursive;
+}
+
+
+.landingPageContainer {
+	@apply relative min-h-screen w-full overflow-hidden;
+	background: linear-gradient(145deg, #020617 0%, #0b1220 56%, #0f172a 100%);
+}
+
+.landingPageContainer::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: radial-gradient(circle at 78% 16%, rgba(34, 211, 238, 0.12), transparent 38%);
+	opacity: 0.8;
+}
+
+.landingPageContainer nav {
+	@apply flex justify-between;
+}
+
+.login-btn {
+	@apply px-5 py-2 rounded-lg font-semibold text-white
+		   bg-cyan-600
+              border border-cyan-500/40
+
+		   transition-all duration-300
+		   hover:shadow-[0_0_15px_rgba(34,211,238,0.6)]
+		   hover:scale-105 active:scale-95;
+}
+
+.getstarted-btn {
+	@apply inline-block mt-3 px-6 py-3 rounded-lg font-semibold text-white
+		   border border-cyan-500/40 bg-black/40 backdrop-blur-md
+		   transition-all duration-300
+		   hover:border-cyan-400
+		   hover:shadow-[0_0_20px_rgba(34,211,238,0.6)]
+		   hover:scale-105 active:scale-95;
+}
+
+/* Mobile Menu Animation */
+@keyframes slideDown {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.mobile-menu {
+	animation: slideDown 0.3s ease-in-out;
+}
+
+/* Responsive Navbar */
+@media (max-width: 768px) {
+	.landingPageContainer nav {
+		@apply relative;
+	}
+
+	.login-btn {
+		@apply px-3 py-2 text-sm;
+	}
+
+	.logout-btn {
+		@apply px-3 py-2 text-sm;
+	}
+}
+
+@media (max-width: 480px) {
+	.login-btn,
+	.logout-btn {
+		@apply px-2 py-1 text-xs;
+	}
+}

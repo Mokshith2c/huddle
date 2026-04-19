@@ -1,0 +1,108 @@
+import {User} from "../models/user.model.js";
+import {Meeting} from "../models/meeting.model.js"
+import httpStatus from  "http-status";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+// import crypto from "crypto";
+import bcrypt from "bcrypt";
+
+dotenv.config();
+
+const generateToken = (username) => {
+    return jwt.sign(
+        //payload
+        {username},
+        //secret
+        process.env.JWT_SECRET,
+        //options
+        {expiresIn: process.env.JWT_EXPIRE}
+    );
+};
+
+const login = async(req, res) => {
+    const {username, password} = req.body;
+    if(!username || !password){
+        return res.status(400).json({message: "Username and password required"});
+    }
+    try{
+        const user = await User.findOne({username});
+        if(!user){
+            return res.status(httpStatus.NOT_FOUND).json({message: "User not found"});
+        }
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return res.status(httpStatus.UNAUTHORIZED).json({
+                message: "Invalid password"
+            });
+        }
+        // let token = crypto.randomBytes(20).toString("hex");
+        let token = generateToken(username)
+
+        return res.status(httpStatus.OK).json({
+            token: token,
+            message: "Login Successful"
+        });
+    }catch(e){
+        return res.status(500).json({message: `Error: ${e.message}`});
+    }
+}
+const register = async (req, res) => {
+    const {name, username, password} = req.body;
+    try{
+        const existingUser = await User.findOne({username});
+        if(existingUser){
+            return res.status(httpStatus.FOUND).json({message: "User already exists"})
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = new User({
+            name: name,
+            username: username,
+            password: hashedPassword
+        }); 
+
+        await newUser.save();
+        const token = generateToken(username);
+        res.status(httpStatus.CREATED).json({
+            token: token,
+            message: "User Registered Successfully"
+        });
+    }catch(e){
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json({message: `Error: ${e.message}`});
+    }
+}
+
+const logout = async(req, res) => {
+    res.status(httpStatus.OK).json({ message: "Logged out successfully" });
+}
+
+const getUserHistory = async(req, res) => {
+    try{
+        const username = req.user.username;
+        const meetings = await Meeting.find({user_id: username});
+        res.json(meetings);
+    }catch(e){
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json({message: `Error ${e.message}`});
+    }
+} 
+
+const addToHistory = async(req, res) => {
+    const {meeting_code, date} = req.body;
+
+    try{
+        const username = req.user.username;
+        const newMeeting = new Meeting({
+            user_id: username,
+            meetingCode: meeting_code,
+            date: date
+        })
+
+        await newMeeting.save();
+        res.status(httpStatus.CREATED).json({message: "Meeting Added to history"})
+    }catch(e){
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json({message: `Error: ${e.message}`});
+    }
+};
+
+export {login, register, logout, getUserHistory, addToHistory};

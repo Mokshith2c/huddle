@@ -1,0 +1,939 @@
+import React from 'react'
+import InputField from "../components/InputField.jsx"
+import { useRef, useState, useEffect } from "react";
+import io from "socket.io-client"
+import { MdOutlineScreenShare } from "react-icons/md";
+import { MdOutlineStopScreenShare } from "react-icons/md";
+import { useNavigate } from 'react-router-dom';
+import WhiteBoard from '../components/WhiteBoard.jsx';
+import MeetingTimer from '../components/MeetingTimer.jsx';
+import withAuth from '../utils/withAuth.jsx';
+
+const backendHost = import.meta.env.VITE_BACKEND_HOST || window.location.hostname;
+const backendPort = import.meta.env.VITE_BACKEND_PORT || "8080";
+const backendProtocol = import.meta.env.VITE_BACKEND_PROTOCOL || "http";
+const server_url = `${backendProtocol}://${backendHost}:${backendPort}`;
+var connections = {}
+var pendingCandidates = {}
+// connections = {
+//    userA: RTCPeerConnection,
+//    userB: RTCPeerConnection
+// }
+
+const peerConnectionConfig = {
+    'iceServers': [
+        { 'urls': 'stun:stun.l.google.com:19302' }
+    ]
+}
+
+function VideoMeetComponent() {
+    var socketRef = useRef();
+    var socketIdRef = useRef();
+    var localVideoRef = useRef();
+    const videoRef = useRef([]);
+    const isSwitchingStreamRef = useRef(false);
+
+
+
+    let [videoAvailable, setVideoAvailable] = useState(true);
+    let [audioAvailable, setAudioAvailable] = useState(true);
+    let [video, setVideo] = useState(false);
+    let [audio, setAudio] = useState(false);
+    let [screen, setScreen] = useState(false);
+    let [showModal, setShowModal] = useState(false);
+    let [screenAvailable, setScreenAvailable] = useState(false);
+    let [whiteboard, setWhiteboard] = useState(false);
+    let [messages, setMessages] = useState([]);
+    let [message, setMessage] = useState("");
+    let [newMessages, setNewMessages] = useState(0);
+    let [askForUsername, setAskForUsername] = useState(true);
+    let [username, setUsername] = useState("");
+    let [videos, setVideos] = useState([]);
+    let [participantNames, setParticipantNames] = useState({});
+    let [participantVideoState, setParticipantVideoState] = useState({});
+    const [callStartedAt, setCallStartedAt] = useState(null);
+    let navigate = useNavigate();
+
+    const broadcastVideoState = (isVideoOn) => {
+        if (!socketRef.current?.connected) {
+            return;
+        }
+
+        Object.keys(connections).forEach((id) => {
+            if (id === socketIdRef.current) {
+                return;
+            }
+
+            socketRef.current.emit("signal", id, JSON.stringify({ videoState: !!isVideoOn }));
+        });
+    };
+
+    const getParticipantName = (socketId) => {
+        const name = participantNames[socketId];
+        if (typeof name === "string" && name.trim()) {
+            return name;
+        }
+        return socketId;
+    };
+
+    const addLocalTracksOnce = (socketId) => {
+        const connection = connections[socketId];
+        if (!connection || connection._tracksAdded || !window.localStream) {
+            return;
+        }
+        console.log("ADDING TRACKS FOR", socketId);
+        window.localStream.getTracks().forEach((track) => {
+            connection.addTrack(track, window.localStream);
+        });
+        connection._tracksAdded = true;
+    };
+
+    const setupPeerConnection = (socketId) => {
+        if (!connections[socketId]) {
+            connections[socketId] = new RTCPeerConnection(peerConnectionConfig);
+            connections[socketId]._tracksAdded = false;
+            pendingCandidates[socketId] = [];
+        }
+
+        const connection = connections[socketId];
+
+        connection.onicecandidate = (event) => {
+            if (event.candidate !== null) {
+                socketRef.current.emit(
+                    "signal",
+                    socketId,
+                    JSON.stringify({ ice: event.candidate })
+                );
+            }
+        };
+
+        connection.ontrack = (event) => {
+            console.log("TRACK RECEIVED", socketId, event);
+            setVideos((videos) => {
+                const existingIndex = videos.findIndex(
+                    (video) => video.socketId === socketId
+                );
+
+                const existingStream = existingIndex >= 0 ? videos[existingIndex].stream : null;
+                const mergedStream = existingStream || new MediaStream();
+                const displayName = getParticipantName(socketId);
+
+                if (event.streams && event.streams[0]) {
+                    event.streams[0].getTracks().forEach((track) => {
+                        const alreadyAdded = mergedStream.getTracks().some((t) => t.id === track.id);
+                        if (!alreadyAdded) {
+                            mergedStream.addTrack(track);
+                        }
+                    });
+                } else if (event.track) {
+                    const alreadyAdded = mergedStream.getTracks().some((t) => t.id === event.track.id);
+                    if (!alreadyAdded) {
+                        mergedStream.addTrack(event.track);
+                    }
+                }
+
+                if (existingIndex >= 0) {
+                    const updatedVideos = videos.map((video, index) =>
+                        index === existingIndex ? { ...video, stream: mergedStream, username: displayName } : video
+                    );
+                    videoRef.current = updatedVideos;
+                    return updatedVideos;
+                }
+
+                const updatedVideos = [
+                    ...videos,
+                    {
+                        socketId,
+                        username: displayName,
+                        stream: mergedStream,
+                        autoPlay: true,
+                        playsinline: true
+                    }
+                ];
+                videoRef.current = updatedVideos;
+                return updatedVideos;
+            });
+        };
+
+        return connection;
+    };
+
+    const replaceTracksForAllConnections = (stream) => {
+        Object.entries(connections).forEach(([remoteSocketId, connection]) => {
+            if (!connection) {
+                return;
+            }
+
+            if (remoteSocketId === socketIdRef.current) {
+                return;
+            }
+
+            let hasTrackUpdate = false;
+
+            stream.getTracks().forEach((track) => {
+                const sender = connection.getSenders().find((s) => s.track?.kind === track.kind);
+                if (sender) {
+                    sender.replaceTrack(track).catch((e) => console.log(e));
+                    hasTrackUpdate = true;
+                } else {
+                    connection.addTrack(track, stream);
+                    hasTrackUpdate = true;
+                }
+            });
+
+            if (
+                hasTrackUpdate &&
+                connection.signalingState === "stable" &&
+                socketRef.current?.connected
+            ) {
+                connection
+                    .createOffer()
+                    .then((description) => connection.setLocalDescription(description))
+                    .then(() => {
+                        socketRef.current.emit(
+                            "signal",
+                            remoteSocketId,
+                            JSON.stringify({ sdp: connection.localDescription })
+                        );
+                    })
+                    .catch((e) => console.log(e));
+            }
+        });
+    };
+
+    const stopLocalStreamTracks = () => {
+        window.localStream?.getTracks?.().forEach((track) => {
+            try {
+                track.stop();
+            } catch (e) {
+                console.log(e);
+            }
+        });
+
+        window.localStream = null;
+
+        if (localVideoRef.current) {
+            localVideoRef.current.srcObject = null;
+        }
+    };
+
+    // if(isChrome() === false){
+
+    // }
+
+
+    const getPermissions = async () => {
+        let isVideoAvailable = false;
+        let isAudioAvailable = false;
+
+        try {
+            const videoPermission = await navigator.mediaDevices.getUserMedia({ video: true });
+            if (videoPermission) {
+                isVideoAvailable = true;
+                videoPermission.getTracks().forEach((track) => track.stop());
+            }
+        } catch {
+            isVideoAvailable = false;
+        }
+
+        try {
+            const audioPermission = await navigator.mediaDevices.getUserMedia({ audio: true });
+            if (audioPermission) {
+                isAudioAvailable = true;
+                audioPermission.getTracks().forEach((track) => track.stop());
+            }
+        } catch {
+            isAudioAvailable = false;
+        }
+
+        setVideoAvailable(isVideoAvailable);
+        setAudioAvailable(isAudioAvailable);
+        setScreenAvailable(!!navigator.mediaDevices.getDisplayMedia);
+
+        if (isVideoAvailable || isAudioAvailable) {
+            try {
+                const userMediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: video && isVideoAvailable,
+                    audio: audio && isAudioAvailable
+                });
+
+                if (userMediaStream) {
+                    window.localStream = userMediaStream;
+                    if (localVideoRef.current) {
+                        localVideoRef.current.srcObject = userMediaStream;
+                    }
+                }
+            } catch (error) {
+                console.log(error);
+            }
+        }
+    };
+
+    useEffect(() => {
+        if (video !== undefined && audio !== undefined) {
+            getUserMedia();
+            console.log("SET STATE HAS ", video, audio);
+
+        }
+    }, [video, audio]);
+
+
+    let getUserMediaSuccess = (stream) => {
+        window.localStream = stream;
+
+        if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream;
+        }
+
+        replaceTracksForAllConnections(stream);
+    };
+    const silence = () => {
+        const ctx = new AudioContext();
+        const oscillator = ctx.createOscillator();
+
+        let dst = oscillator.connect(ctx.createMediaStreamDestination());
+
+        oscillator.start();
+        ctx.resume();
+        return Object.assign(dst.stream.getAudioTracks()[0], { enabled: false });
+    }
+
+    const black = ({ width = 640, height = 480 } = {}) => {
+        const canvas = Object.assign(document.createElement("canvas"), { width, height });
+
+        canvas.getContext('2d').fillRect(0, 0, width, height);
+        let stream = canvas.captureStream();
+        return Object.assign(stream.getVideoTracks()[0], { enabled: false })
+    }
+
+    let getUserMedia = () => {
+        if ((video && videoAvailable) || (audio && audioAvailable)) {
+            navigator.mediaDevices.getUserMedia({ video: video, audio: audio })
+                .then(getUserMediaSuccess)
+                .catch((e) => console.log(e));
+        } else {
+            try {
+                let tracks = localVideoRef.current.srcObject?.getTracks?.() || [];
+                tracks.forEach(track => track.stop())
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    }
+    useEffect(() => {
+        getPermissions();
+        console.log("Hi");
+    }, [])
+
+    useEffect(() => {
+        if ((video || screen) && localVideoRef.current && window.localStream) {
+            localVideoRef.current.srcObject = window.localStream;
+        }
+    }, [video, screen]);
+
+    useEffect(() => {
+        return () => {
+            Object.values(connections).forEach((connection) => {
+                try {
+                    connection.close();
+                } catch (e) {
+                    console.log(e);
+                }
+            });
+
+            connections = {};
+            pendingCandidates = {};
+
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
+            }
+
+            stopLocalStreamTracks();
+        };
+    }, []);
+
+    let gotMessageFromServer = (fromId, message) => {
+        const signal = JSON.parse(message);
+
+        if (fromId !== socketIdRef.current) {
+            if (typeof signal.videoState === "boolean") {
+                setParticipantVideoState((prev) => ({ ...prev, [fromId]: signal.videoState }));
+                return;
+            }
+
+            const connection = setupPeerConnection(fromId);
+
+            if (signal.sdp) {
+                const remoteDescription = new RTCSessionDescription(signal.sdp);
+                const isOffer = remoteDescription.type === "offer";
+
+                const remoteDescriptionPromise =
+                    isOffer && connection.signalingState !== "stable"
+                        ? connection
+                            .setLocalDescription({ type: "rollback" })
+                            .then(() => connection.setRemoteDescription(remoteDescription))
+                        : connection.setRemoteDescription(remoteDescription);
+
+                remoteDescriptionPromise
+                    .then(() => {
+                        if (isOffer) {
+                            addLocalTracksOnce(fromId);
+                            connection.createAnswer().then((description) => {
+                                connection.setLocalDescription(description).then(() => {
+                                    socketRef.current.emit("signal", fromId, JSON.stringify({ "sdp": connection.localDescription }))
+                                })
+                                    .catch(e => console.log(e));
+                            })
+                                .catch(e => console.log(e))
+                        }
+
+                            const queuedCandidates = pendingCandidates[fromId] || [];
+                            queuedCandidates.forEach((candidate) => {
+                                connection.addIceCandidate(candidate).catch(e => console.log(e));
+                            });
+                            pendingCandidates[fromId] = [];
+                    })
+                    .catch(e => console.log(e))
+            }
+            if (signal.ice) {
+                const candidate = new RTCIceCandidate(signal.ice);
+                if (connection.remoteDescription) {
+                    connection.addIceCandidate(candidate).catch(e => console.log(e))
+                } else {
+                    pendingCandidates[fromId] = pendingCandidates[fromId] || [];
+                    pendingCandidates[fromId].push(candidate);
+                }
+            }
+        }
+    }
+    let addMessage = (data, sender, socketIdSender) => {
+        setMessages((prevMessages) => [
+            ...prevMessages,
+            { sender: sender, data: data }
+        ])
+        if (!showModal && socketIdSender !== socketIdRef.current) {
+            setNewMessages((prevMessages) => prevMessages + 1);
+        }
+    }
+    let connectToSocketServer = () => {
+        socketRef.current = io.connect(server_url)
+        socketRef.current.on("signal", gotMessageFromServer);
+        socketRef.current.on("connect", () => {
+            const safeUsername =
+                typeof username === "string" && username.trim()
+                    ? username.trim()
+                    : "Guest";
+            socketRef.current.emit("join-call", window.location.href, safeUsername)
+            socketIdRef.current = socketRef.current.id;
+            socketRef.current.on("chat-message", addMessage);
+            socketRef.current.on("user-left", (id) => {
+                setVideos((videos) => videos.filter((video) => video.socketId !== id));
+                setParticipantNames((prevNames) => {
+                    const updatedNames = { ...prevNames };
+                    delete updatedNames[id];
+                    return updatedNames;
+                });
+                setParticipantVideoState((prevVideoState) => {
+                    const updatedVideoState = { ...prevVideoState };
+                    delete updatedVideoState[id];
+                    return updatedVideoState;
+                });
+                connections[id]?.close();
+                delete connections[id];
+            })
+            socketRef.current.on("user-joined", (id, clients, usersInRoom = {}, roomStartAt) => {
+                setParticipantNames((prevNames) => ({ ...prevNames, ...usersInRoom }));
+                if (roomStartAt) {
+                    setCallStartedAt(roomStartAt);
+                }
+                setVideos((videos) => videos.map((video) => ({
+                    ...video,
+                    username: usersInRoom[video.socketId] || video.username
+                })));
+
+                clients.forEach((socketListId) => {
+                    if (socketListId === socketIdRef.current) {
+                        return;
+                    }
+
+                    setupPeerConnection(socketListId);
+
+                    if (window.localStream !== undefined && window.localStream !== null) {
+                        addLocalTracksOnce(socketListId);
+                    } else {
+                        const blackSilence = (...args) => new MediaStream([black(...args), silence()]);
+                        window.localStream = blackSilence()
+                        addLocalTracksOnce(socketListId);
+                    }
+                })
+
+                if (id === socketIdRef.current) {
+                    for (let id2 in connections) {
+                        if (id2 === socketIdRef.current) continue;
+                        try {
+                            addLocalTracksOnce(id2);
+                        } catch (e) {
+                            console.log(e);
+                        }
+
+                        connections[id2].createOffer().then((description) => {
+                            connections[id2].setLocalDescription(description)
+                                .then(() => {
+                                    socketRef.current.emit("signal", id2, JSON.stringify({ "sdp": connections[id2].localDescription }))
+                                })
+                                .catch(e => console.log(e));
+                        })
+                    }
+                }
+
+                broadcastVideoState(video);
+            })
+        })
+    }
+
+    const toggleAudioBtn = () => {
+        setAudio(prev => !prev);
+    }
+
+    const toggleVideoBtn = () => {
+        setVideo(prev => {
+            const newState = !prev;
+
+            if (!newState) {
+                // VIDEO OFF
+                const currentVideoTracks = window.localStream?.getVideoTracks?.() || [];
+                const currentAudioTrack = window.localStream?.getAudioTracks?.()[0] || null;
+                const outgoingTracks = [];
+
+                if (audio && currentAudioTrack) {
+                    outgoingTracks.push(currentAudioTrack);
+                } else {
+                    outgoingTracks.push(silence());
+                }
+
+                const audioOnlyStream = new MediaStream(outgoingTracks);
+
+                window.localStream = audioOnlyStream;
+                if (localVideoRef.current) {
+                    localVideoRef.current.srcObject = audioOnlyStream;
+                }
+
+                replaceTracksForAllConnections(audioOnlyStream);
+
+                currentVideoTracks.forEach((track) => {
+                    try {
+                        track.stop();
+                    } catch (e) {
+                        console.log(e);
+                    }
+                });
+            } else {
+                // VIDEO ON
+                navigator.mediaDevices.getUserMedia({ video: true, audio: audio })
+                    .then(getUserMediaSuccess)
+                    .catch(console.log);
+            }
+
+            broadcastVideoState(newState);
+
+            return newState;
+        });
+    };
+
+    const toggleScreenBtn = async () => {
+        if (!screen) {
+            if (!navigator.mediaDevices?.getDisplayMedia) {
+                return;
+            }
+
+            try {
+                const displayStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                });
+                const displayVideoTrack = displayStream.getVideoTracks()[0] || null;
+
+                if (!displayVideoTrack) {
+                    return;
+                }
+
+                const currentAudioTracks = window.localStream?.getAudioTracks?.().filter((track) => track.readyState === "live") || [];
+                const currentVideoTracks = window.localStream?.getVideoTracks?.() || [];
+                const screenStream = new MediaStream([displayVideoTrack, ...currentAudioTracks]);
+
+                isSwitchingStreamRef.current = true;
+                try {
+                    currentVideoTracks.forEach((track) => track.stop());
+                } catch (e) {
+                    console.log(e);
+                }
+
+                window.localStream = screenStream;
+                if (localVideoRef.current) {
+                    localVideoRef.current.srcObject = screenStream;
+                }
+                replaceTracksForAllConnections(screenStream);
+                setScreen(true);
+                broadcastVideoState(true);
+
+                displayVideoTrack.onended = () => {
+                    setScreen(false);
+                    getUserMedia();
+                    broadcastVideoState(video);
+                };
+
+                setTimeout(() => {
+                    isSwitchingStreamRef.current = false;
+                }, 0);
+            } catch (e) {
+                console.log(e);
+                isSwitchingStreamRef.current = false;
+                setScreen(false);
+            }
+            return;
+        }
+
+        setScreen(false);
+        getUserMedia();
+        broadcastVideoState(video);
+    }
+    const showWhiteboard = () => {
+        setWhiteboard((prev) => !prev);
+    }
+    let getMedia = () => {
+
+        if ((video && videoAvailable) || (audio && audioAvailable)) {
+            navigator.mediaDevices.getUserMedia({ video: video && videoAvailable, audio: audio && audioAvailable })
+                .then(getUserMediaSuccess)
+                .catch((e) => console.log(e));
+        }
+        connectToSocketServer();
+    }
+
+    let connect = () => {
+        const safeUsername =
+            typeof username === "string" && username.trim()
+                ? username.trim()
+                : "Guest";
+
+        setUsername(safeUsername);
+        setAskForUsername(false);
+        getMedia();
+    }
+
+    const sendMessage = () => {
+        const trimmedMessage = message.trim();
+        const socket = socketRef.current;
+
+        if (!trimmedMessage) {
+            return;
+        }
+
+        // Guard against early clicks before the socket is ready.
+        if (!socket || !socket.connected) {
+            return;
+        }
+
+        socket.emit("chat-message", trimmedMessage, username);
+        setMessage("");
+    }
+
+    const handleEndCall = () => {
+        stopLocalStreamTracks();
+
+        if (socketRef.current) {
+            socketRef.current.disconnect();
+            socketRef.current = null;
+        }
+
+        setCallStartedAt(null);
+        navigate('/home')
+    }
+
+
+
+    return (
+        <div className="h-screen">
+            {
+                askForUsername === true ?
+                    <div className="h-screen w-screen flex items-center justify-center bg-[radial-gradient(circle_at_20%_10%,#16263a_0%,#0b1117_45%,#090e14_100%)] p-4">
+                        <div className="w-full max-w-md">
+                            <div className="relative mb-8 overflow-hidden rounded-2xl border-2 border-sky-400/50 bg-slate-900 shadow-2xl">
+                                <video 
+                                    ref={localVideoRef} 
+                                    autoPlay 
+                                    muted 
+                                    playsInline
+                                    className="h-80 w-full object-cover block bg-slate-950"
+                                />
+                                <div className="absolute top-3 right-3 flex gap-2">
+                                    <div className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium ${video ? 'bg-green-500/80 text-white' : 'bg-red-500/80 text-white'}`}>
+                                        <i className={`fa-solid ${video ? 'fa-video' : 'fa-video-slash'}`}></i>
+                                        {video ? 'Video On' : 'Video Off'}
+                                    </div>
+                                    <div className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium ${audio ? 'bg-green-500/80 text-white' : 'bg-red-500/80 text-white'}`}>
+                                        <i className={`fa-solid ${audio ? 'fa-microphone' : 'fa-microphone-slash'}`}></i>
+                                        {audio ? 'Audio On' : 'Audio Off'}
+                                    </div>
+                                </div>
+                                <div className="absolute bottom-3 left-3 right-3 space-y-1">
+                                    {!videoAvailable && <p className="text-xs text-red-300">⚠️ Camera not available</p>}
+                                    {!audioAvailable && <p className="text-xs text-red-300">⚠️ Microphone not available</p>}
+                                </div>
+                            </div>
+                            <div className="mb-6">
+                                <label className="mb-2 block text-sm font-medium text-slate-300">Your Name</label>
+                                <InputField
+                                    placeholder="Enter your username"
+                                    value={username}
+                                    onChange={(event) => setUsername(event.target.value)}
+                                    inputClassName="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400 focus:border-sky-400 focus:ring-sky-500/30"
+                                />
+                            </div>
+
+                            {/* Controls before joining */}
+                            <div className="mb-4 flex gap-3">
+                                <button
+                                    onClick={() => setVideo(!video)}
+                                    className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 font-medium transition-all duration-200 ${video ? 'bg-slate-700 hover:bg-slate-600' : 'bg-red-500/20 hover:bg-red-500/30 text-red-300'}`}
+                                >
+                                    <i className={`fa-solid ${video ? 'fa-video' : 'fa-video-slash'}`}></i>
+                                    {video ? 'Video On' : 'Video Off'}
+                                </button>
+                                <button
+                                    onClick={() => setAudio(!audio)}
+                                    className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 font-medium transition-all duration-200 ${audio ? 'bg-slate-700 hover:bg-slate-600' : 'bg-red-500/20 hover:bg-red-500/30 text-red-300'}`}
+                                >
+                                    <i className={`fa-solid ${audio ? 'fa-microphone' : 'fa-microphone-slash'}`}></i>
+                                    {audio ? 'Audio On' : 'Audio Off'}
+                                </button>
+                            </div>
+
+                            {/* Join button */}
+                            <button 
+                                onClick={connect}
+                                disabled={!username.trim()}
+                                className="w-full rounded-lg bg-linear-to-r from-sky-500 to-cyan-500 py-3 font-semibold text-white transition-all duration-200 hover:from-sky-400 hover:to-cyan-400 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                            >
+                                <i className="fa-solid fa-phone mr-2"></i>
+                                Join Meeting
+                            </button>
+
+                            {/* Info text */}
+                            <p className="mt-4 text-center text-xs text-slate-400">
+                                Make sure your camera and microphone are working before joining
+                            </p>
+                        </div>
+                    </div>
+                    :
+                    <div className="h-screen overflow-hidden bg-[radial-gradient(circle_at_20%_10%,#16263a_0%,#0b1117_45%,#090e14_100%)] text-slate-100 p-5 flex flex-col gap-5">
+                        <MeetingTimer
+                            startAt={callStartedAt}
+                            isActive={!askForUsername}
+                            className="self-start rounded-full border border-slate-700/70 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-200 shadow"
+                        />
+                        <div className="flex flex-1 min-h-0 gap-4 flex-col md:flex-row lg:flex-row">
+                            {/* Remote videos grid */}
+                            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] auto-rows-fr gap-4 flex-1 min-h-0">
+                                {videos.map((video) => {
+
+                                const videoTrack = video.stream?.getVideoTracks()?.[0];
+                                const videoStateFromPeer = participantVideoState[video.socketId];
+                                const isVideoOn = typeof videoStateFromPeer === "boolean"
+                                    ? videoStateFromPeer
+                                    : !!videoTrack;
+
+                                return (
+                                    <div key={video.socketId} className="relative h-full min-h-0 overflow-hidden rounded-xl border border-slate-700/40 bg-slate-900 shadow-lg">
+
+                    
+                                        {!isVideoOn ? (
+                                            //AVATAR
+                                            <div className="h-full w-full flex items-center justify-center bg-slate-900">
+                                                <div className="flex flex-col items-center">
+                                                    <div className="h-20 w-20 rounded-full bg-purple-500 flex items-center justify-center text-white text-2xl font-bold">
+                                                        {getParticipantName(video.socketId)?.charAt(0).toUpperCase() || "U"}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            // VIDEO
+                                            <video
+                                                key="video-on"
+                                                autoPlay
+                                                playsInline
+                                                className="h-full w-full object-cover"
+                                                ref={(ref) => {
+                                                    if (!ref) return;
+
+                                                    if (!isVideoOn) {
+                                                        ref.srcObject = null;   // ⭐ THIS FIXES YOUR ISSUE
+                                                        return;
+                                                    }
+
+                                                    if (video.stream) {
+                                                        if (ref.srcObject !== video.stream) {
+                                                            ref.srcObject = video.stream;
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        )}
+
+                                        <span className="absolute right-2.5 bottom-2.5 rounded-md bg-slate-900/70 px-2 py-1 text-xs">
+                                            {getParticipantName(video.socketId)}
+                                        </span>
+
+                                    </div>
+                                );
+                            })}
+                            </div>
+                            {whiteboard && (
+                                <div className='w-125 h-[70vh] min-h-0 rounded-xl border border-slate-700/70 bg-slate-900/95 shadow-xl box-border flex flex-col'>
+                                    <WhiteBoard socket={socketRef.current} width={500} ></WhiteBoard>
+                                </div>
+                            )
+                            }
+
+                            {showModal && (
+                                <div className="max-h-full h-auto w-75 shrink-0 rounded-xl border border-slate-700/70 bg-slate-900/95 flex flex-col shadow-xl z-30 overflow-hidden">
+                                    <div className="p-3 border-b border-slate-700/70 font-semibold flex justify-between items-center bg-slate-900">
+                                        <div className="text-slate-100">
+                                            Chat
+                                        </div>
+                                        <button className="h-8 w-8 rounded-full text-slate-300 transition hover:bg-slate-800 hover:text-white" onClick={() => setShowModal(false)}>
+                                            <i className="fa-regular fa-circle-xmark"></i>
+                                        </button>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0 bg-slate-900/40">
+                                        {messages.map((item, index) => (
+                                            <div key={index} className="min-w-0 overflow-x-hidden rounded-lg border border-slate-700/70 bg-slate-800/85 px-3 py-2 text-sm text-slate-100">
+                                                <span className='mb-1 flex items-center gap-1 font-bold wrap-break-word'><i className="fa-solid fa-circle-user" />{item.sender}</span>
+                                                <p className="whitespace-pre-wrap wrap-break-word">{item.data}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+
+
+
+                                    <div className="p-3 border-t border-slate-700/70 flex items-center gap-2 bg-slate-900">
+                                        <InputField
+                                            value={message}
+                                            onChange={(e) => setMessage(e.target.value)}
+                                            placeholder="Type message..."
+                                            wrapperClassName="!mb-0 flex-1"
+                                            inputClassName="h-11 py-0 bg-slate-800 border-slate-700 placeholder:text-slate-400 focus:border-sky-400 focus:ring-sky-500/30"
+                                        />
+                                        <button
+                                            onClick={sendMessage}
+                                            className="h-11 shrink-0 rounded-lg bg-sky-500 px-4 text-sm font-medium text-white transition-all duration-200 ease-out hover:bg-sky-400 hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                                        >
+                                            Send
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+
+
+                        <div className="fixed bottom-22.5 h-32.5 w-50 overflow-hidden rounded-xl border-2 border-sky-400/90 bg-slate-900 shadow-xl">
+                            {(video || screen) && (
+                                <video
+                                    ref={localVideoRef}
+                                    autoPlay
+                                    muted
+                                    playsInline
+                                    className="h-full w-full object-cover"
+                                />
+                            )}
+
+                            {/* Avator */}
+                            {!(video || screen) && (
+                                <div className="h-full w-full flex items-center justify-center bg-slate-800">
+                                    <div className="flex flex-col items-center">
+                                        <div className="h-16 w-16 rounded-full bg-sky-500 flex items-center justify-center text-xl font-bold text-white">
+                                            {username?.charAt(0)?.toUpperCase() || "U"}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+
+                            <span className="absolute right-2 bottom-2 rounded-md bg-slate-900/70 px-2 py-1 text-[11px]">
+                                You
+                            </span>
+                        </div>
+
+                        <div className="m-auto flex gap-2.5 rounded-full border border-slate-700/40 bg-slate-900/95 px-3 py-2 shadow-lg">
+
+                            <button
+                                onClick={toggleAudioBtn}
+                                className="h-11 w-11 rounded-full bg-slate-800 text-lg text-slate-100 transition-all duration-200 ease-out hover:bg-slate-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {audio ?
+                                    <i className="fa-solid fa-microphone"></i>
+                                    :
+                                    <i className="fa-solid fa-microphone-slash"></i>
+                                }
+                            </button>
+
+                            <button
+                                onClick={toggleVideoBtn}
+                                className="h-11 w-11 rounded-full bg-slate-800 text-lg text-slate-100 transition-all duration-200 ease-out hover:bg-slate-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {video ?
+                                    <i className="fa-solid fa-video"></i>
+                                    :
+                                    <i className="fa-solid fa-video-slash"></i>
+                                }
+                            </button>
+
+                            <button className="h-11 w-11 rounded-full bg-slate-800 text-lg text-slate-100 transition-all duration-200 ease-out hover:bg-slate-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                                onClick={showWhiteboard}>
+                                <i className="fa-solid fa-pencil"></i>
+                            </button>
+
+                            <div className="relative inline-block">
+                                <button className="h-11 w-11 rounded-full bg-slate-800 text-lg text-slate-100 transition-all duration-200 ease-out hover:bg-slate-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                                    onClick={() => {
+                                        setShowModal(prev => !prev)
+                                        setNewMessages(0);
+                                    }}
+                                >
+                                    <i className="fa-brands fa-rocketchat"></i>
+                                </button>
+
+                                {newMessages > 0 && !showModal && (
+                                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-semibold leading-none text-white ring-2 ring-slate-900 shadow">
+                                    {newMessages > 99 ? "99+" : newMessages}
+                                </span>
+                                )}
+                            </div>
+
+                            {screenAvailable &&
+                                <button className="h-11 w-11 rounded-full bg-slate-800 text-lg text-slate-100 transition-all duration-200 ease-out hover:bg-slate-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-95" onClick={toggleScreenBtn}>
+                                    {
+                                        screen ?
+                                            <MdOutlineScreenShare className='size-6 m-auto'></MdOutlineScreenShare>
+                                            :
+                                            <MdOutlineStopScreenShare className='size-6 m-auto' />
+                                    }
+                                </button>
+                            }
+
+
+                            <button className="h-11 w-11 rounded-full bg-red-500 text-lg text-white transition-all duration-200 ease-out hover:bg-red-600 hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                                onClick={handleEndCall}>
+                                <i className="fa-solid fa-phone"></i>
+                            </button>
+
+                        </div>
+                    </div>
+            }
+        </div >
+    )
+}
+
+export default withAuth(VideoMeetComponent);

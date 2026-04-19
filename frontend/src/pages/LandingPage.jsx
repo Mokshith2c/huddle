@@ -1,0 +1,192 @@
+import "./LandingPage.css";
+import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useContext, useState } from "react";
+import { AuthContext } from "../contexts/AuthContext";
+const LandingPage = () => {
+  const navigate = useNavigate();
+  const { showToast } = useContext(AuthContext);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleGuestClick = () => {
+  showToast("Sneaky move... 😏, Sign in First", 2500);
+
+    setTimeout(() => {
+      navigate("/auth");
+    }, 600);
+  };
+
+  const handleLogout = () => {
+        localStorage.removeItem("token");
+        navigate("/");
+  };
+
+  return (
+    <div className='landingPageContainer'>
+      
+      <nav className="flex justify-between items-center w-full pt-8 px-5">
+        <div>
+          <Link to="/" className=' px-5 text-3xl font-bold tracking-wide text-white drop-shadow-md'>
+              Huddle
+          </Link>
+        </div>
+
+        <button 
+          className="md:hidden text-white text-2xl"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          ☰
+        </button>
+
+        {/* Desktop Menu */}
+        <div className="hidden md:flex gap-8 items-center text-white">
+          {
+          !localStorage.getItem("token")?
+          (
+          <>
+            <p
+              className="cursor-pointer hover:text-cyan-400 transition"
+              onClick={handleGuestClick}
+            >
+              Join as Guest
+            </p>
+
+            <p className="cursor-pointer hover:text-cyan-400 transition"
+            onClick={()=>navigate('/auth')}>
+              Register
+            </p>
+
+            <Link to="/auth" className="login-btn">
+              Login
+            </Link>
+          </>
+          )
+          :
+          (
+          <button className="logout-btn" onClick={handleLogout}>
+              Logout
+          </button>
+          )
+          }
+        </div>
+
+
+        {mobileMenuOpen && (
+          <div className="md:hidden absolute top-20 left-0 right-0 bg-slate-900/95 border-b border-cyan-500/30 p-4 flex flex-col gap-4 text-white mobile-menu">
+            {
+            !localStorage.getItem("token")?
+            (
+            <>
+              <p
+                className="cursor-pointer hover:text-cyan-400 transition"
+                onClick={() => {
+                  handleGuestClick();
+                  setMobileMenuOpen(false);
+                }}
+              >
+                Join as Guest
+              </p>
+
+              <p className="cursor-pointer hover:text-cyan-400 transition"
+              onClick={()=>{
+                navigate('/auth');
+                setMobileMenuOpen(false);
+              }}>
+                Register
+              </p>
+
+              <Link to="/auth" className="login-btn block text-center" onClick={() => setMobileMenuOpen(false)}>
+                Login
+              </Link>
+            </>
+            )
+            :
+            (
+            <button className="logout-btn w-full" onClick={() => {
+              handleLogout();
+              setMobileMenuOpen(false);
+            }}>
+                Logout
+            </button>
+            )
+            }
+          </div>
+        )}
+      </nav>
+
+      <div className='mt-14 flex flex-col items-center justify-around gap-10 px-6 lg:flex-row lg:gap-0 lg:mr-10'>
+        <div className='w-full max-w-2xl lg:w-2/6'>
+          <p className='text-white text-5xl md:text-5xl font-bold leading-tight'>
+            Meet. Talk. Collaborate.
+          </p>
+          {/* <p className='text-white text-5xl md:text-5xl font-bold leading-tight'>
+            <span className="text-cyan-400">Connect</span> with your Loved Ones
+          </p> */}
+
+          {/* <p className='mb-7 mt-3 text-xl text-gray-200'>
+            Cover a distance by <span className="text-cyan-400">huddle</span> ❤️
+          </p> */}
+          <p className='mb-7 mt-3 text-xl text-gray-200'>
+            Cover a distance by <span className="text-cyan-400">huddle</span> ❤️
+          </p>
+
+          <Link className="getstarted-btn" to="/home">
+            Get Started
+          </Link>
+        </div>
+
+        <img
+          src="/huddle.svg"
+          alt="app preview"
+          className="w-full max-w-120 lg:h-120 lg:w-130"
+        />
+      </div>
+
+      {/* Features Section */}
+      <div className='mt-24 px-6 pb-16'>
+        <h2 className='text-center text-3xl font-bold text-white mb-12'>Why Choose Huddle?</h2>
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto'>
+          
+          <div className='bg-slate-900/50 border border-slate-700/40 rounded-lg p-6 text-center hover:border-cyan-400/50 transition'>
+            <div className='text-4xl mb-3'>📹</div>
+            <h3 className='text-white font-semibold mb-2'>HD Video Calls</h3>
+            <p className='text-slate-400 text-sm'>Crystal clear video and audio for seamless meetings</p>
+          </div>
+
+          <div className='bg-slate-900/50 border border-slate-700/40 rounded-lg p-6 text-center hover:border-cyan-400/50 transition'>
+            <div className='text-4xl mb-3'>💬</div>
+            <h3 className='text-white font-semibold mb-2'>Real-time Chat</h3>
+            <p className='text-slate-400 text-sm'>Send instant messages alongside your video</p>
+          </div>
+
+          <div className='bg-slate-900/50 border border-slate-700/40 rounded-lg p-6 text-center hover:border-cyan-400/50 transition'>
+            <div className='text-4xl mb-3'>✏️</div>
+            <h3 className='text-white font-semibold mb-2'>Whiteboard</h3>
+            <p className='text-slate-400 text-sm'>Collaborate and draw together in real-time</p>
+          </div>
+
+          <div className='bg-slate-900/50 border border-slate-700/40 rounded-lg p-6 text-center hover:border-cyan-400/50 transition'>
+            <div className='text-4xl mb-3'>📱</div>
+            <h3 className='text-white font-semibold mb-2'>Easy to Use</h3>
+            <p className='text-slate-400 text-sm'>No downloads needed, just press call</p>
+          </div>
+
+          <div className='bg-slate-900/50 border border-slate-700/40 rounded-lg p-6 text-center hover:border-cyan-400/50 transition'>
+            <div className='text-4xl mb-3'>🔒</div>
+            <h3 className='text-white font-semibold mb-2'>Secure</h3>
+            <p className='text-slate-400 text-sm'>Your meetings are encrypted and private</p>
+          </div>
+
+          <div className='bg-slate-900/50 border border-slate-700/40 rounded-lg p-6 text-center hover:border-cyan-400/50 transition'>
+            <div className='text-4xl mb-3'>⏱️</div>
+            <h3 className='text-white font-semibold mb-2'>Meeting Timer</h3>
+            <p className='text-slate-400 text-sm'>Track time spent in your calls</p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LandingPage;
