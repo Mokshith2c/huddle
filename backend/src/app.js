@@ -13,7 +13,7 @@ const server = createServer(app);
 const io = connectToSocket(server);
 app.set("port", (process.env.PORT || 8080));
 app.use(cors({
-    origin: ["http://localhost:5173", "http://localhost:5174", "http://10.180.142.72:5173", "http://10.180.142.72:8080"],
+    origin: [process.env.FRONTEND_URL, process.env.FRONTEND_TEST_URL],
     credentials: true
 }));
 app.use(express.json({limit: "40kb"}));
