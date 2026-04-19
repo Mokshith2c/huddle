@@ -7,12 +7,9 @@ const AuthPage = () => {
 	const {isSignup, setIsSignup } = React.useContext(AuthContext);
 	
 	React.useEffect(() => {
-		document.title = "Huddle - Auth";
 		setIsSignup(false);
 	}, []);
 
-	
-	
 
 	return (
 		<div className="relative min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_20%_10%,#16263a_0%,#0b1117_45%,#090e14_100%)] px-4 py-8">
