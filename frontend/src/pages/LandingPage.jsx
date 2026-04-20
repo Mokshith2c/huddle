@@ -178,9 +178,9 @@ const LandingPage = () => {
           </div>
 
           <div className='bg-slate-900/50 border border-slate-700/40 rounded-lg p-6 text-center hover:border-cyan-400/50 transition'>
-            <div className='text-4xl mb-3'>⏱️</div>
-            <h3 className='text-white font-semibold mb-2'>Meeting Timer</h3>
-            <p className='text-slate-400 text-sm'>Track time spent in your calls</p>
+            <div className='text-4xl mb-3'>🖥️</div>
+            <h3 className='text-white font-semibold mb-2'>Screen Sharing</h3>
+            <p className='text-slate-400 text-sm'>Share your screen instantly for better collaboration</p>
           </div>
 
         </div>
