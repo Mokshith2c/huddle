@@ -25,7 +25,6 @@ function GrandChild() {
   return <h1>Hello {user}</h1>;
 }
 
-//When we want to use context with useState
 const [user, setUser] = useState("Mokshith");
 
 <UserContext.Provider value={{user, setUser}}>

@@ -3,7 +3,7 @@ import { useRef, useEffect, useState } from 'react';
 import { IoArrowUndo } from "react-icons/io5";
 import { IoArrowRedo } from "react-icons/io5";
 import { MdDownloadForOffline } from "react-icons/md";
-function WhiteBoard({ socket, width = 500 }) {
+function WhiteBoard({ socket, width = 500, showWB }) {
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
   const drawingRef = useRef(false);
@@ -229,6 +229,9 @@ function WhiteBoard({ socket, width = 500 }) {
           <button className="rounded-md bg-slate-800 px-3 py-[0.3rem] text-[0.8rem] text-slate-100 transition-all duration-200 ease-out hover:bg-slate-700 hover:-translate-y-0.5  active:translate-y-0 active:scale-95"
             onClick={handleDownload}>
             <MdDownloadForOffline />
+          </button>
+          <button className="h-8 w-8 rounded-full text-slate-300 py-[0.3rem] transition hover:bg-slate-800 hover:text-white" onClick={showWB}>
+              <i className="fa-regular fa-circle-xmark"></i>
           </button>
         </div>
 

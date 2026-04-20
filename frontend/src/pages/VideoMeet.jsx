@@ -5,6 +5,8 @@ import io from "socket.io-client"
 import { MdOutlineScreenShare } from "react-icons/md";
 import { MdOutlineStopScreenShare } from "react-icons/md";
 import { useNavigate } from 'react-router-dom';
+import {useParams } from 'react-router-dom';
+import { QRCodeSVG } from "qrcode.react";
 import WhiteBoard from '../components/WhiteBoard.jsx';
 import MeetingTimer from '../components/MeetingTimer.jsx';
 import withAuth from '../utils/withAuth.jsx';
@@ -52,9 +54,45 @@ function VideoMeetComponent() {
     let [videos, setVideos] = useState([]);
     let [participantNames, setParticipantNames] = useState({});
     let [participantVideoState, setParticipantVideoState] = useState({});
+    let [showInvite, setShowInvite] = useState(false);
     const [callStartedAt, setCallStartedAt] = useState(null);
+    let [copied, setCopied] = useState(false);
     let navigate = useNavigate();
 
+    const { url: meetingCode } = useParams();
+    const roomId = meetingCode?.trim() || window.location.pathname.replace(/^\/+/, "");
+    const inviteLink = meetingCode
+    ? window.location.origin + "/" + encodeURIComponent(meetingCode)
+    : "";
+
+    const handleCopyInvite = async () => {
+        if (!inviteLink) return;
+        try {
+            await navigator.clipboard.writeText(inviteLink);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (error) {
+            console.error("Copy invite failed", error);
+        }
+    };
+
+    const handleShareInvite = async () => {
+        if (!inviteLink) return;
+
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: "Join my meeting",
+                    text: "Click to join meeting",
+                    url: inviteLink,
+                });
+            } else {
+                await handleCopyInvite();
+            }
+        } catch (error) {
+            console.error("Share invite failed", error);
+        }
+    };
     const broadcastVideoState = (isVideoOn) => {
         if (!socketRef.current?.connected) {
             return;
@@ -424,7 +462,7 @@ function VideoMeetComponent() {
                 typeof username === "string" && username.trim()
                     ? username.trim()
                     : "Guest";
-            socketRef.current.emit("join-call", window.location.href, safeUsername)
+            socketRef.current.emit("join-call", roomId, safeUsername)
             socketIdRef.current = socketRef.current.id;
             socketRef.current.on("chat-message", addMessage);
             socketRef.current.on("user-left", (id) => {
@@ -797,8 +835,8 @@ function VideoMeetComponent() {
                             })}
                             </div>
                             {whiteboard && (
-                                <div className='w-125 h-[70vh] min-h-0 rounded-xl border border-slate-700/70 bg-slate-900/95 shadow-xl box-border flex flex-col'>
-                                    <WhiteBoard socket={socketRef.current} width={500} ></WhiteBoard>
+                                <div className='w-125 h-[70vh] min-h-0 rounded-xl border border-slate-700/70 bg-slate-900/95 shadow-xl box-border flex flex-col z-10'>
+                                    <WhiteBoard showWB={showWhiteboard} socket={socketRef.current} width={500} ></WhiteBoard>
                                 </div>
                             )
                             }
@@ -874,6 +912,43 @@ function VideoMeetComponent() {
                             </span>
                         </div>
 
+                        {showInvite && (
+                            <div className="absolute bottom-20 right-5 bg-slate-900 p-4 rounded-lg flex flex-col gap-2 ">
+                                <div className="flex items-center justify-center gap-7">
+                                    <p className='font-bold text-balance'>Meeting Link</p>
+                                    <button className="h-8 w-8 ml-2 rounded-full text-slate-300 transition hover:text-white" onClick={() => setShowInvite(!showInvite)}>
+                                            <i className="fa-regular fa-circle-xmark"></i>
+                                    </button>
+                                </div>
+                                <div className="w-fit">
+                                    <input
+                                        value={inviteLink}
+                                        readOnly
+                                        className="px-2 py-1 text-sm bg-slate-800 text-white rounded w-[156px]"
+                                    />
+                                </div>
+
+                                <div className="flex justify-between gap-2">
+                                <button onClick={handleCopyInvite}>
+                                    {
+                                        copied ?
+                                        <i class="fa-solid fa-circle-check"></i>
+                                         :
+                                        <i class="fa-solid fa-copy"></i>
+                                    }
+                                </button>
+                                
+                                <button onClick={handleShareInvite}>
+                                    <i class="fa-solid fa-share-nodes"></i>
+                                </button>
+                                </div>
+
+                                <div className="bg-white p-2 rounded w-[156px]">
+                                <QRCodeSVG value={inviteLink} size={140}/>
+                                </div>
+
+                            </div>
+                        )}
                         <div className="m-auto flex gap-2.5 rounded-full border border-slate-700/40 bg-slate-900/95 px-3 py-2 shadow-lg">
 
                             <button
@@ -930,7 +1005,11 @@ function VideoMeetComponent() {
                                     }
                                 </button>
                             }
-
+                            <button className="h-11 w-11  rounded-full bg-slate-800 text-lg text-slate-100 transition-all duration-200 ease-out hover:bg-slate-700 hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                                    onClick={() => setShowInvite(!showInvite)}
+                            >
+                                <i className="fa-solid fa-user-plus"></i>
+                            </button>
 
                             <button className="h-11 w-11 rounded-full bg-red-500 text-lg text-white transition-all duration-200 ease-out hover:bg-red-600 hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
                                 onClick={handleEndCall}>

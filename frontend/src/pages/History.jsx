@@ -13,9 +13,6 @@ function History() {
 
     const formatDate = (dateValue) => {
         const parsedDate = new Date(dateValue);
-        // if (Number.isNaN(parsedDate.getTime())) {
-        //     return 'Unknown date';
-        // }
         return parsedDate.toLocaleString();
     };
 

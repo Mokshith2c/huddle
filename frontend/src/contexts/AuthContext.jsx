@@ -118,7 +118,6 @@ export const AuthProvider = ({ children }) => {
             let message = err.response?.data?.message || "Something went wrong";
             showToast(message, 4000, "error");
             console.error("Auth error:", message);
-            // Don't clear form on error - keep user data visible
         }
     };
 
