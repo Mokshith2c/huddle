@@ -87,12 +87,18 @@ function VideoMeetComponent() {
                     url: inviteLink,
                 });
             } else {
-                await handleCopyInvite();
+                await handleWhatsAppInvite();
             }
         } catch (error) {
             console.error("Share invite failed", error);
         }
     };
+    const handleWhatsAppInvite = () => {
+		if (!inviteLink) return;
+		const message = `Join my Huddle meeting: ${inviteLink}`;
+		const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+		window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+	};
     const broadcastVideoState = (isVideoOn) => {
         if (!socketRef.current?.connected) {
             return;
@@ -928,20 +934,24 @@ function VideoMeetComponent() {
                                     />
                                 </div>
 
-                                <div className="flex justify-between gap-2">
-                                <button onClick={handleCopyInvite}>
-                                    {
-                                        copied ?
-                                        <i class="fa-solid fa-circle-check"></i>
-                                         :
-                                        <i class="fa-solid fa-copy"></i>
-                                    }
-                                </button>
-                                
-                                <button onClick={handleShareInvite}>
-                                    <i class="fa-solid fa-share-nodes"></i>
-                                </button>
-                                </div>
+                               <div className="flex gap-2 items-center justify-center text-white">
+									<button onClick={handleCopyInvite}>
+										{
+											copied ?
+											<i class="fa-solid fa-circle-check"></i>
+												:
+											<i class="fa-solid fa-copy"></i>
+										}
+									</button>
+									
+									<button onClick={handleShareInvite}>
+										<i class="fa-solid fa-share-nodes"></i>
+									</button>
+
+									<button onClick={handleWhatsAppInvite} title="Share on WhatsApp">
+										<i className="fa-brands fa-whatsapp"></i>
+									</button>
+								</div>
 
                                 <div className="bg-white p-2 rounded w-[156px]">
                                 <QRCodeSVG value={inviteLink} size={140}/>
