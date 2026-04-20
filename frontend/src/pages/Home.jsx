@@ -196,7 +196,7 @@ function Home() {
 									/>
 								</div>
 
-								<div className="flex justify-between gap-2 text-white">
+								<div className="flex justify-between gap-8 text-white">
 									<button onClick={handleCopyInvite}>
 										{
 											copied ?

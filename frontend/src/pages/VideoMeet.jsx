@@ -934,7 +934,7 @@ function VideoMeetComponent() {
                                     />
                                 </div>
 
-                               <div className="flex gap-2 items-center justify-center text-white">
+                               <div className="flex gap-8 items-center justify-center text-white">
 									<button onClick={handleCopyInvite}>
 										{
 											copied ?
