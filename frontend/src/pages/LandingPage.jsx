@@ -166,6 +166,12 @@ const LandingPage = () => {
           </div>
 
           <div className='bg-slate-900/50 border border-slate-700/40 rounded-lg p-6 text-center hover:border-cyan-400/50 transition'>
+            <div className='text-4xl mb-3'>🖥️</div>
+            <h3 className='text-white font-semibold mb-2'>Screen Sharing</h3>
+            <p className='text-slate-400 text-sm'>Share your screen instantly for better collaboration</p>
+          </div>
+          
+          <div className='bg-slate-900/50 border border-slate-700/40 rounded-lg p-6 text-center hover:border-cyan-400/50 transition'>
             <div className='text-4xl mb-3'>📱</div>
             <h3 className='text-white font-semibold mb-2'>Easy to Use</h3>
             <p className='text-slate-400 text-sm'>No downloads needed, just press call</p>
@@ -177,11 +183,6 @@ const LandingPage = () => {
             <p className='text-slate-400 text-sm'>Your meetings are encrypted and private</p>
           </div>
 
-          <div className='bg-slate-900/50 border border-slate-700/40 rounded-lg p-6 text-center hover:border-cyan-400/50 transition'>
-            <div className='text-4xl mb-3'>🖥️</div>
-            <h3 className='text-white font-semibold mb-2'>Screen Sharing</h3>
-            <p className='text-slate-400 text-sm'>Share your screen instantly for better collaboration</p>
-          </div>
 
         </div>
       </div>
