@@ -919,7 +919,7 @@ function VideoMeetComponent() {
                         </div>
 
                         {showInvite && (
-                            <div className="absolute bottom-20 right-5 bg-slate-900 p-4 rounded-lg flex flex-col gap-2 ">
+                            <div className="absolute bottom-23 right-5 bg-slate-900 p-4 rounded-lg flex flex-col gap-2 ">
                                 <div className="flex items-center justify-center gap-7">
                                     <p className='font-bold text-balance'>Meeting Link</p>
                                     <button className="h-8 w-8 ml-2 rounded-full text-slate-300 transition hover:text-white" onClick={() => setShowInvite(!showInvite)}>
