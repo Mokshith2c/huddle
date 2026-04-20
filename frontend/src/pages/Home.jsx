@@ -53,15 +53,22 @@ function Home() {
 			if (navigator.share) {
 				await navigator.share({
 					title: "Join my meeting",
-					text: "Click to join meeting",
+					text: "Click to join my Huddle meeting",
 					url: inviteLink,
 				});
 			} else {
-				await handleCopyInvite();
+				handleWhatsAppInvite();
 			}
 		} catch (error) {
 			console.error("Share invite failed", error);
 		}
+	};
+
+	const handleWhatsAppInvite = () => {
+		if (!inviteLink) return;
+		const message = `Join my Huddle meeting: ${inviteLink}`;
+		const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+		window.open(whatsappUrl, "_blank", "noopener,noreferrer");
 	};
 	return (
 		<div className="relative min-h-screen overflow-hidden bg-[linear-gradient(145deg,#020617_0%,#0b1220_56%,#0f172a_100%)] flex flex-col">
@@ -201,6 +208,10 @@ function Home() {
 									
 									<button onClick={handleShareInvite}>
 										<i class="fa-solid fa-share-nodes"></i>
+									</button>
+
+									<button onClick={handleWhatsAppInvite} title="Share on WhatsApp">
+										<i className="fa-brands fa-whatsapp"></i>
 									</button>
 								</div>
 
