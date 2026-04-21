@@ -5,6 +5,7 @@ import httpStatus from "http-status"
 dotenv.config();
 
 export const authMiddleware = (req, res, next) => {
+    console.log("auth reached");
     const token = req.headers.authorization?.split(" ")[1];
 
     if(!token){

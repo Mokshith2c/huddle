@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import userRoutes from "./routes/users.routes.js";
 import dotenv from "dotenv";
+import chatRoutes from "./routes/chat.routes.js";
 
 dotenv.config();
 
@@ -32,8 +33,11 @@ app.use(cors({
   },
   credentials: true
 }));
+
+app.use("/api/v1/chat", chatRoutes);
 app.use(express.json({limit: "40kb"}));
 app.use(express.urlencoded({limit: "40kb", extended: true}))
+app.use("/uploads", express.static("uploads"));
 
 app.use((req, res, next) => {
     console.log(req.method, req.url);
@@ -41,6 +45,14 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/v1/users", userRoutes);
+
+app.use((err, req, res, next) => {
+  if (err) {
+    return res.status(400).json({ message: err.message });
+  }
+  next();
+});
+
 app.get("/home", (req, res)=>{
     return res.json({"hello":"World"})
 });

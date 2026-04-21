@@ -142,7 +142,6 @@ const LandingPage = () => {
         />
       </div>
 
-      {/* Features Section */}
       <div className='mt-24 px-6 pb-16'>
         <h2 className='text-center text-3xl font-bold text-white mb-12'>Why Choose Huddle?</h2>
         <div className='grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto'>

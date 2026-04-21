@@ -2,6 +2,7 @@ import React from 'react'
 import InputField from "../components/InputField.jsx"
 import { useRef, useState, useEffect } from "react";
 import io from "socket.io-client"
+import axios from "axios";
 import { MdOutlineScreenShare } from "react-icons/md";
 import { MdOutlineStopScreenShare } from "react-icons/md";
 import { useNavigate } from 'react-router-dom';
@@ -32,6 +33,7 @@ function VideoMeetComponent() {
     var socketRef = useRef();
     var socketIdRef = useRef();
     var localVideoRef = useRef();
+    const fileInputRef = useRef(null);
     const videoRef = useRef([]);
     const isSwitchingStreamRef = useRef(false);
     const showModalRef = useRef(false);
@@ -690,6 +692,10 @@ function VideoMeetComponent() {
         setMessage("");
     }
 
+    const triggerFilePicker = () => {
+        fileInputRef.current?.click();
+    };
+
     const handleEndCall = () => {
         stopLocalStreamTracks();
 
@@ -703,6 +709,78 @@ function VideoMeetComponent() {
     }
 
 
+    const handleFileUpload = async (file) => {
+        try {
+            if (!file) return;
+
+            const socket = socketRef.current;
+            if (!socket || !socket.connected) {
+                setMessages((prevMessages) => [
+                    ...prevMessages,
+                    { sender: "System", data: "File was not sent because chat is disconnected." }
+                ]);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const token = localStorage.getItem("token");
+            const res = await axios.post(
+                `${backendProtocol}://${backendHost}:${backendPort}/api/v1/chat/upload`,
+                formData,
+                {
+                    headers: {
+                        ...(token ? { Authorization: `Bearer ${token}` } : {})
+                    }
+                }
+            );
+
+            const fileData = res.data;
+            const chatPayload = {
+                type: "file",
+                name: fileData.originalName,
+                url: fileData.url
+            };
+            socket.emit("chat-message", chatPayload, username);
+        } catch (error) {
+            const uploadMessage =
+                error?.response?.data?.message ||
+                error?.message ||
+                "Unknown upload error";
+
+            setMessages((prevMessages) => [
+                ...prevMessages,
+                { sender: "System", data: `File upload failed: ${uploadMessage}` }
+            ]);
+            console.error("File upload failed", error);
+        } finally {
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        }
+    };
+    const handleDownload = async (url, filename) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+
+            const fileURL = window.URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = fileURL;
+            link.download = filename;
+
+            document.body.appendChild(link);
+            link.click();
+
+            link.remove();
+            window.URL.revokeObjectURL(fileURL);
+
+        } catch (error) {
+            console.error("Download failed:", error);
+        }
+    };
 
     return (
         <div className="h-screen">
@@ -743,7 +821,6 @@ function VideoMeetComponent() {
                                 />
                             </div>
 
-                            {/* Controls before joining */}
                             <div className="mb-4 flex gap-3">
                                 <button
                                     onClick={() => setVideo(!video)}
@@ -761,7 +838,7 @@ function VideoMeetComponent() {
                                 </button>
                             </div>
 
-                            {/* Join button */}
+
                             <button 
                                 onClick={connect}
                                 disabled={!username.trim()}
@@ -771,7 +848,6 @@ function VideoMeetComponent() {
                                 Join Meeting
                             </button>
 
-                            {/* Info text */}
                             <p className="mt-4 text-center text-xs text-slate-400">
                                 Make sure your camera and microphone are working before joining
                             </p>
@@ -785,7 +861,6 @@ function VideoMeetComponent() {
                             className="self-start rounded-full border border-slate-700/70 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-200 shadow"
                         />
                         <div className="flex flex-1 min-h-0 gap-4 flex-col md:flex-row lg:flex-row">
-                            {/* Remote videos grid */}
                             <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] auto-rows-fr gap-4 flex-1 min-h-0">
                                 {videos.map((video) => {
 
@@ -848,7 +923,7 @@ function VideoMeetComponent() {
                             }
 
                             {showModal && (
-                                <div className="max-h-full h-auto w-75 shrink-0 rounded-xl border border-slate-700/70 bg-slate-900/95 flex flex-col shadow-xl z-30 overflow-hidden">
+                                <div className="max-h-full h-auto w-90 shrink-0 rounded-xl border border-slate-700/70 bg-slate-900/95 flex flex-col shadow-xl z-30 overflow-hidden">
                                     <div className="p-3 border-b border-slate-700/70 font-semibold flex justify-between items-center bg-slate-900">
                                         <div className="text-slate-100">
                                             Chat
@@ -858,31 +933,120 @@ function VideoMeetComponent() {
                                         </button>
                                     </div>
 
-                                    <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0 bg-slate-900/40">
-                                        {messages.map((item, index) => (
-                                            <div key={index} className="min-w-0 overflow-x-hidden rounded-lg border border-slate-700/70 bg-slate-800/85 px-3 py-2 text-sm text-slate-100">
-                                                <span className='mb-1 flex items-center gap-1 font-bold wrap-break-word'><i className="fa-solid fa-circle-user" />{item.sender}</span>
-                                                <p className="whitespace-pre-wrap wrap-break-word">{item.data}</p>
-                                            </div>
-                                        ))}
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-900/40">
+                                        {messages.map((item, index) => {
+
+                                            const isOwn = item.sender === username;
+                                            const isFile = typeof item.data === "object" && item.data.type === "file";
+
+                                            const isImage = isFile && item.data.url.match(/\.(jpg|jpeg|png|gif)$/i);
+                                            const isPDF = isFile && item.data.url.match(/\.pdf$/i);
+
+                                            return (
+                                                <div
+                                                    key={index}
+                                                    className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
+                                                >
+                                                    <div
+                                                        className={`
+                                                            px-3 py-2 rounded-2xl max-w-[220px] break-words
+                                                            ${isOwn 
+                                                                ? "bg-blue-950 text-white rounded-br-sm" 
+                                                                : "bg-slate-700 text-white rounded-bl-sm"}
+                                                        `}
+                                                    >
+
+                                                        {!isOwn && (
+                                                            <div className="text-[12px] opacity-75 mb-1">
+                                                               <i className="fa-solid fa-circle-user mr-1"></i>{item.sender}
+                                                            </div>
+                                                        )}
+
+                                                   
+                                                        {!isFile && (
+                                                            <p className="text-sm">{item.data}</p>
+                                                        )}
+
+       
+                                                        {isFile && (
+                                                            <div className="flex flex-col gap-2">
+
+                              
+                                                                {isImage && (
+                                                                    <img
+                                                                        src={item.data.url}
+                                                                        alt={item.data.name}
+                                                                        className="rounded-lg max-h-36 w-full object-cover"
+                                                                    />
+                                                                )}
+
+                                                                <div className="flex items-center gap-2 text-sm">
+                                                                    <span>
+                                                                        {isImage ?
+                                                                         <i className="fa-solid fa-camera"></i>
+                                                                         : (isPDF ?
+                                                                                <i className="fa-solid fa-file-pdf "></i>
+                                                                            :
+                                                                                <i className="fa-solid fa-folder"></i>
+                                                                            )}
+                                                                        <a
+                                                                            href={item.data.url}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="underline text-blue-200 ml-1 hover:text-blue-100"
+                                                                        >
+                                                                            {item.data.name}
+                                                                        </a>
+                                                                    </span>
+
+                                                                </div>
+
+                                                                <button
+                                                                    onClick={() => handleDownload(item.data.url, item.data.name)}
+                                                                    className="flex items-center gap-1 text-[11px] opacity-70 bg-blue-900 text-white w-fit py-1 px-2 rounded-xl hover:opacity-100 transition-all duration-300 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                                                                    >
+                                                                    <i className="fa-solid fa-download"></i>
+                                                                    Download
+                                                                </button>
+                                                            </div>
+                                                        )}
+
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-
-
-
                                     <div className="p-3 border-t border-slate-700/70 flex items-center gap-2 bg-slate-900">
                                         <InputField
                                             value={message}
                                             onChange={(e) => setMessage(e.target.value)}
                                             placeholder="Type message..."
                                             wrapperClassName="!mb-0 flex-1"
-                                            inputClassName="h-11 py-0 bg-slate-800 border-slate-700 placeholder:text-slate-400 focus:border-sky-400 focus:ring-sky-500/30"
+                                            inputClassName="h-10 py-0 bg-slate-800 border-slate-700 placeholder:text-slate-400 focus:border-sky-400 focus:ring-sky-500/30"
                                         />
-                                        <button
-                                            onClick={sendMessage}
-                                            className="h-11 shrink-0 rounded-lg bg-sky-500 px-4 text-sm font-medium text-white transition-all duration-200 ease-out hover:bg-sky-400 hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
-                                        >
-                                            Send
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={triggerFilePicker}
+                                                className="size-10 shrink-0 rounded-4xl bg-sky-500  text-sm font-medium  text-white transition-all duration-200 ease-out hover:bg-sky-400 hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                                                type="button"
+                                            >
+                                                <i className="fa-solid fa-upload"></i>
+                                            </button>
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.pdf"
+                                                className="hidden"
+                                                onChange={(e) => handleFileUpload(e.target.files?.[0])}
+                                            />
+                                            <button
+                                                onClick={sendMessage}
+                                                className="size-10 shrink-0 rounded-4xl bg-sky-500  text-sm font-medium  text-white transition-all duration-200 ease-out hover:bg-sky-400 hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                                                type="button"
+                                            >
+                                                <i className="fa-solid fa-paper-plane"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -901,7 +1065,6 @@ function VideoMeetComponent() {
                                 />
                             )}
 
-                            {/* Avator */}
                             {!(video || screen) && (
                                 <div className="h-full w-full flex items-center justify-center bg-slate-800">
                                     <div className="flex flex-col items-center">
@@ -930,7 +1093,7 @@ function VideoMeetComponent() {
                                     <input
                                         value={inviteLink}
                                         readOnly
-                                        className="px-2 py-1 text-sm bg-slate-800 text-white rounded w-[156px]"
+                                        className="px-2 py-1 text-sm bg-slate-800 text-white rounded w-39"
                                     />
                                 </div>
 
@@ -938,14 +1101,14 @@ function VideoMeetComponent() {
 									<button onClick={handleCopyInvite}>
 										{
 											copied ?
-											<i class="fa-solid fa-circle-check"></i>
+                                            <i className="fa-solid fa-circle-check"></i>
 												:
-											<i class="fa-solid fa-copy"></i>
+                                            <i className="fa-solid fa-copy"></i>
 										}
 									</button>
 									
 									<button onClick={handleShareInvite}>
-										<i class="fa-solid fa-share-nodes"></i>
+                                        <i className="fa-solid fa-share-nodes"></i>
 									</button>
 
 									<button onClick={handleWhatsAppInvite} title="Share on WhatsApp">
@@ -953,7 +1116,7 @@ function VideoMeetComponent() {
 									</button>
 								</div>
 
-                                <div className="bg-white p-2 rounded w-[156px]">
+                                <div className="bg-white p-2 rounded w-39">
                                 <QRCodeSVG value={inviteLink} size={140}/>
                                 </div>
 
