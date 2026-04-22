@@ -1,7 +1,7 @@
 import "./LandingPage.css";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 const LandingPage = () => {
   const navigate = useNavigate();
