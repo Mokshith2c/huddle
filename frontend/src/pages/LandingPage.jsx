@@ -15,7 +15,21 @@ const LandingPage = () => {
       navigate("/auth");
     }, 600);
   };
+  const backendHost = import.meta.env.VITE_BACKEND_HOST || window.location.hostname;
+  const backendPort = import.meta.env.VITE_BACKEND_PORT || "8080";
+  const backendProtocol = import.meta.env.VITE_BACKEND_PROTOCOL || "http";
+  const server_url = `${backendProtocol}://${backendHost}:${backendPort}`;
+  useEffect(() => {
+    const wakeServer = async () => {
+          try {
+              await fetch(`${server_url}/health`);
+          } catch {
+              setTimeout(wakeServer, 3000);
+          }
+      };
 
+      wakeServer();
+  }, []);
   const handleLogout = () => {
         localStorage.removeItem("token");
         navigate("/");
