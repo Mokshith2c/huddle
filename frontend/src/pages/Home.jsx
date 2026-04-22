@@ -98,6 +98,11 @@ function Home() {
 				<section className="relative z-10 px-6 md:px-8 pt-10 md:pt-20 pb-10 md:pb-16 w-full lg:w-auto">
 					<div className="max-w-xl rounded-2xl border border-slate-400/20 bg-slate-900/60 p-6 text-white shadow-[0_10px_32px_rgba(2,6,23,0.35)] backdrop-blur-xs">
 						<img
+							src="/home-sm-top.svg"
+							alt=""
+							className="md:hidden absolute -top-[6.2rem] left-1/3 z-2 size-30 drop-shadow-2xl"
+						/>
+						<img
 							src="/loginper.svg"
 							alt=""
 							className="hidden md:block absolute -top-27 -left-17 z-2 size-40 drop-shadow-2xl"
@@ -128,7 +133,7 @@ function Home() {
 				<img
 					src="/home.svg"
 					alt="app preview"
-					className="w-90 md:w-100 lg:w-120 drop-shadow-2xl self-center"
+					className="w-75 md:w-100 lg:w-120 drop-shadow-2xl self-center"
 				/>
 			</div>
 
