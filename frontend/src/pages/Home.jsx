@@ -110,7 +110,7 @@ function Home() {
 						<img
 							src="/loginper3.svg"
 							alt=""
-							className="hidden md:block absolute -top-27 left-88 z-2 size-30 drop-shadow-2xl"
+							className="hidden md:block absolute -top-27 left-9/12 z-2 size-30 drop-shadow-2xl"
 						/>
 						<p className="text-cyan-200 text-sm tracking-[0.2em] uppercase">Your workspace</p>
 
@@ -133,7 +133,7 @@ function Home() {
 				<img
 					src="/home.svg"
 					alt="app preview"
-					className="w-75 md:w-100 lg:w-120 drop-shadow-2xl self-center"
+					className="w-75 mt-10 md:w-100 lg:w-120 drop-shadow-2xl self-center"
 				/>
 			</div>
 
