@@ -53,6 +53,10 @@ app.use((err, req, res, next) => {
   next();
 });
 
+app.get("/health", (req, res) => {
+    res.status(200).send("OK");
+});
+
 app.get("/home", (req, res)=>{
     return res.json({"hello":"World"})
 });
