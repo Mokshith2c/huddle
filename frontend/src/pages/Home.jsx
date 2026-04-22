@@ -100,7 +100,7 @@ function Home() {
 						<img
 							src="/home-sm-top.svg"
 							alt=""
-							className="md:hidden absolute -top-[6.2rem] left-1/3 z-2 size-30 drop-shadow-2xl"
+							className="md:hidden absolute -top-28 left-1/3 z-2 size-34 drop-shadow-2xl"
 						/>
 						<img
 							src="/loginper.svg"
