@@ -57,7 +57,7 @@ function History() {
                     </button>
                 </div>
             </nav>
-            <div className='flex-1 flex flex-col lg:flex-row mt-10 lg:mt-0 justify-center lg:justify-around items-center gap-8 lg:gap-0 px-4'>
+            <div className='flex-1 flex flex-col lg:flex-row mt-7 lg:mt-0 justify-center lg:justify-around items-center gap-8 lg:gap-0 px-4'>
                 <section className="relative z-10 px-6 md:px-8 pt-10 md:pt-20 pb-10 md:pb-16 w-full lg:w-1/2">
                     <div className="max-w-xl rounded-2xl border border-slate-400/20 bg-slate-900/60 p-6 text-white shadow-[0_10px_32px_rgba(2,6,23,0.35)] backdrop-blur-xs">
                         <p className='text-lg md:text-xl font-semibold'>Meeting History</p>
@@ -94,7 +94,7 @@ function History() {
                         )}
                     </div>
                 </section>
-                <img src="history.svg" className='w-64 md:w-72 lg:w-2/6 drop-shadow-2xl self-center' alt="" />
+                <img src="history.svg" className='w-62 mb-8 mt-1 md:mr-5 md:w-72 lg:w-2/6 drop-shadow-2xl self-center' alt="" />
             </div>
         </div>
     );
