@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 // import crypto from "crypto";
 import bcrypt from "bcrypt";
+import { Media } from "../models/media.model.js";
 
 dotenv.config();
 
@@ -80,7 +81,7 @@ const logout = async(req, res) => {
 const getUserHistory = async(req, res) => {
     try{
         const username = req.user.username;
-        const meetings = await Meeting.find({user_id: username});
+        const meetings = await Meeting.find({user_id: username}).sort({date: -1});
         res.json(meetings);
     }catch(e){
         res.status(httpStatus.INTERNAL_SERVER_ERROR).json({message: `Error ${e.message}`});
@@ -105,4 +106,30 @@ const addToHistory = async(req, res) => {
     }
 };
 
-export {login, register, logout, getUserHistory, addToHistory};
+const getMediaHistory = async(req, res) => {
+    try{
+        const username = req.user.username;
+        const meetings = await Meeting.find({user_id: username});
+        const meetingCodes = meetings.map(m => m.meetingCode);
+
+        const media = await Media.find({
+            meetingCode: { $in: meetingCodes }
+        }).sort({ uploadedAt: -1 });
+        
+        const groupedMedia = {}
+        media.forEach(item => {
+            if(!groupedMedia[item.meetingCode]){
+                groupedMedia[item.meetingCode] = [];
+            }
+            groupedMedia[item.meetingCode].push(item);
+        })
+        res.status(httpStatus.OK).json(groupedMedia);
+    }
+    catch(e){
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+            message: `Error: ${e.message}`
+        });
+    }
+}
+
+export {login, register, logout, getUserHistory, addToHistory, getMediaHistory};

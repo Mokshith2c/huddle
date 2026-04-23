@@ -173,7 +173,7 @@ function Home() {
 								setShowModal(false);
 								setMode(-1);
 							}}>
-                            <i class="fa-solid fa-xmark text-xl"></i>
+                            <i className="fa-solid fa-xmark text-xl"></i>
                         </button>
 
 						<h3 className="text-xl md:text-2xl font-semibold text-cyan-200 mt-4">
@@ -197,7 +197,7 @@ function Home() {
 									<input
 										value={inviteLink}
 										readOnly
-										className="px-2 py-1 text-sm bg-slate-800 text-white rounded w-[156px]"
+										className="px-2 py-1 text-sm bg-slate-800 text-white rounded w-39"
 									/>
 								</div>
 
@@ -205,14 +205,14 @@ function Home() {
 									<button onClick={handleCopyInvite}>
 										{
 											copied ?
-											<i class="fa-solid fa-circle-check"></i>
+											<i className="fa-solid fa-circle-check"></i>
 												:
-											<i class="fa-solid fa-copy"></i>
+											<i className="fa-solid fa-copy"></i>
 										}
 									</button>
 									
 									<button onClick={handleShareInvite}>
-										<i class="fa-solid fa-share-nodes"></i>
+										<i className="fa-solid fa-share-nodes"></i>
 									</button>
 
 									<button onClick={handleWhatsAppInvite} title="Share on WhatsApp">
@@ -221,7 +221,7 @@ function Home() {
 								</div>
 
 								{/* QR */}
-								<div className="bg-white p-2 rounded w-[156px]">
+								<div className="bg-white p-2 rounded w-39">
 								<QRCodeSVG value={inviteLink} size={140}/>
 								</div>
 

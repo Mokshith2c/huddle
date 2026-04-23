@@ -153,6 +153,11 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
+    const getMediaHistory = async() => {
+        const res = await client.get("/media-history");
+        return res.data;
+    };
+
     const data = {
         handleRegister,
         handleLogin,
@@ -179,7 +184,8 @@ export const AuthProvider = ({ children }) => {
         password,
         setPassword,
         addToUserHistory,
-        getHistoryOfUser
+        getHistoryOfUser,
+        getMediaHistory
     };
 
     return (

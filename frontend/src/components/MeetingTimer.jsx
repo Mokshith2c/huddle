@@ -29,7 +29,7 @@ function MeetingTimer({ startAt, isActive = true, className = "" }) {
 
     return (
         <div className={className}>
-            <i class="fa-solid fa-clock"></i> : {formatDuration(elapsedSeconds)}
+            <i className="fa-solid fa-clock"></i> : {formatDuration(elapsedSeconds)}
         </div>
     );
 }

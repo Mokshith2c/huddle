@@ -724,6 +724,7 @@ function VideoMeetComponent() {
 
             const formData = new FormData();
             formData.append("file", file);
+            formData.append("meetingCode", roomId);
 
             const token = localStorage.getItem("token");
             const res = await axios.post(
@@ -949,7 +950,7 @@ function VideoMeetComponent() {
                                                 >
                                                     <div
                                                         className={`
-                                                            px-3 py-2 rounded-2xl max-w-[220px] break-words
+                                                            px-3 py-2 rounded-2xl max-w-55 wrap-break-word
                                                             ${isOwn 
                                                                 ? "bg-blue-950 text-white rounded-br-sm" 
                                                                 : "bg-slate-700 text-white rounded-bl-sm"}

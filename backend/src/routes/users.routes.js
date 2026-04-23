@@ -1,5 +1,5 @@
 import { Router } from "express";
-import {login, register, logout, getUserHistory, addToHistory} from '../controllers/user.controller.js'
+import {login, register, logout, getUserHistory, addToHistory, getMediaHistory} from '../controllers/user.controller.js'
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { validateRequest, signInSchema, signUpSchema } from "../middleware/joi.validation.js";
 
@@ -10,5 +10,6 @@ router.route("/register").post(validateRequest(signUpSchema), register);
 router.route("/logout").post(authMiddleware, logout);
 router.route("/add_to_activity").post(authMiddleware, addToHistory);
 router.route("/get_all_activity").get(authMiddleware, getUserHistory);
+router.get("/media-history", authMiddleware, getMediaHistory);
 
 export default router;
