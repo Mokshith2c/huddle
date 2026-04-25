@@ -121,7 +121,6 @@ function WhiteBoard({ socket, width = 500, showWB }) {
     const x = point.x;
     const y = point.y;
 
-    // Cursor should follow mouse even when not actively drawing.
     drawCursor(x, y);
 
     if (!drawingRef.current || !socket) return;

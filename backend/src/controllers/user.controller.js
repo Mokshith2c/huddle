@@ -81,7 +81,24 @@ const logout = async(req, res) => {
 const getUserHistory = async(req, res) => {
     try{
         const username = req.user.username;
-        const meetings = await Meeting.find({user_id: username}).sort({date: -1});
+        const meetings = await Meeting.aggregate([
+            { $match: { user_id: username } },
+            { $sort: { date: -1 } },
+            {
+                $group: {
+                    _id: "$meetingCode",
+                    date: { $first: "$date" }
+                }
+            },
+            {
+                $project: {
+                    _id: "$_id",
+                    meetingCode: "$_id",
+                    date: 1
+                }
+            },
+            { $sort: { date: -1 } }
+        ]);
         res.json(meetings);
     }catch(e){
         res.status(httpStatus.INTERNAL_SERVER_ERROR).json({message: `Error ${e.message}`});
@@ -93,13 +110,19 @@ const addToHistory = async(req, res) => {
 
     try{
         const username = req.user.username;
-        const newMeeting = new Meeting({
-            user_id: username,
-            meetingCode: meeting_code,
-            date: date
-        })
+        const normalizedMeetingCode = typeof meeting_code === "string" ? meeting_code.trim() : "";
+        if(!normalizedMeetingCode){
+            return res.status(httpStatus.BAD_REQUEST).json({message: "meeting_code is required"});
+        }
 
-        await newMeeting.save();
+        const parsedDate = date ? new Date(date) : new Date();
+        const meetingDate = Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+
+        await Meeting.findOneAndUpdate(
+            { user_id: username, meetingCode: normalizedMeetingCode },
+            { $set: { date: meetingDate } },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
         res.status(httpStatus.CREATED).json({message: "Meeting Added to history"})
     }catch(e){
         res.status(httpStatus.INTERNAL_SERVER_ERROR).json({message: `Error: ${e.message}`});
@@ -110,7 +133,12 @@ const getMediaHistory = async(req, res) => {
     try{
         const username = req.user.username;
         const meetings = await Meeting.find({user_id: username});
-        const meetingCodes = meetings.map(m => m.meetingCode);
+        const meetingCodesFromHistory = meetings.map((m) => m.meetingCode);
+        const meetingCodesFromUploads = await Media.distinct("meetingCode", {
+            senderUsername: username
+        });
+        const meetingCodes = [...new Set([...meetingCodesFromHistory, ...meetingCodesFromUploads])]
+            .filter((code) => typeof code === "string" && code.trim().length > 0);
 
         const media = await Media.find({
             meetingCode: { $in: meetingCodes }

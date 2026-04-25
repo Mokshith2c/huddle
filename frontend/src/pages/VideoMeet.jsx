@@ -11,6 +11,7 @@ import { QRCodeSVG } from "qrcode.react";
 import WhiteBoard from '../components/WhiteBoard.jsx';
 import MeetingTimer from '../components/MeetingTimer.jsx';
 import withAuth from '../utils/withAuth.jsx';
+import { AuthContext } from '../contexts/AuthContext.jsx';
 
 const backendHost = import.meta.env.VITE_BACKEND_HOST || window.location.hostname;
 const backendPort = import.meta.env.VITE_BACKEND_PORT || "8080";
@@ -30,6 +31,7 @@ const peerConnectionConfig = {
 }
 
 function VideoMeetComponent() {
+    const { addToUserHistory } = React.useContext(AuthContext);
     var socketRef = useRef();
     var socketIdRef = useRef();
     var localVideoRef = useRef();
@@ -665,11 +667,19 @@ function VideoMeetComponent() {
         connectToSocketServer();
     }
 
-    let connect = () => {
+    let connect = async () => {
         const safeUsername =
             typeof username === "string" && username.trim()
                 ? username.trim()
                 : "Guest";
+
+        try {
+            if (roomId?.trim()) {
+                await addToUserHistory(roomId.trim());
+            }
+        } catch (error) {
+            console.error("Failed to add meeting to history", error);
+        }
 
         setUsername(safeUsername);
         setAskForUsername(false);
