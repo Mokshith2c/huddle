@@ -67,14 +67,16 @@ let roomStartTimes = {}
 // roomStartTimes = {
 //   "/room1": 1710840000000
 // }
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_TEST_URL,
+    "https://huddlemeet.tech"
+].filter(Boolean);
 
 export const connectToSocket = (server) => {
     const io = new Server(server, {
         cors: {
-            origin: [
-                process.env.FRONTEND_URL,
-                process.env.FRONTEND_TEST_URL
-            ],
+            origin: allowedOrigins,
             methods: ['GET', 'POST'],
             credentials: true
         }

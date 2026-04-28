@@ -13,24 +13,18 @@ const app = express();
 const server = createServer(app);
 const io = connectToSocket(server);
 app.set("port", (process.env.PORT || 8080));
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_TEST_URL,
+  "https://huddlemeet.tech"
+].filter(Boolean);
 // app.use(cors({
 //     origin: [process.env.FRONTEND_URL, process.env.FRONTEND_TEST_URL],
 //     methods: ["GET", "POST", "PUT", "DELETE"],
 //     credentials: true
 // }));
 app.use(cors({
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      process.env.FRONTEND_TEST_URL
-    ];
-
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  origin: allowedOrigins,
   credentials: true
 }));
 
