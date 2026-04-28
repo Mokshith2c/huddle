@@ -16,7 +16,8 @@ app.set("port", (process.env.PORT || 8080));
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   process.env.FRONTEND_TEST_URL,
-  "https://huddlemeet.tech"
+  "https://huddlemeet.tech",
+  "https://www.huddlemeet.tech"
 ].filter(Boolean);
 // app.use(cors({
 //     origin: [process.env.FRONTEND_URL, process.env.FRONTEND_TEST_URL],

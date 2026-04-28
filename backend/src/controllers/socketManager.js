@@ -70,7 +70,8 @@ let roomStartTimes = {}
 const allowedOrigins = [
     process.env.FRONTEND_URL,
     process.env.FRONTEND_TEST_URL,
-    "https://huddlemeet.tech"
+    "https://huddlemeet.tech",
+    "https://www.huddlemeet.tech"
 ].filter(Boolean);
 
 export const connectToSocket = (server) => {
