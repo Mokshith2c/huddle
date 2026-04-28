@@ -52,7 +52,6 @@ const LandingPage = () => {
           ☰
         </button>
 
-        {/* Desktop Menu */}
         <div className="hidden md:flex gap-8 items-center text-white">
           {
           !localStorage.getItem("token")?
@@ -133,13 +132,7 @@ const LandingPage = () => {
           <p className='text-white text-5xl md:text-5xl font-bold leading-tight'>
             Meet. Talk. Collaborate.
           </p>
-          {/* <p className='text-white text-5xl md:text-5xl font-bold leading-tight'>
-            <span className="text-cyan-400">Connect</span> with your Loved Ones
-          </p> */}
 
-          {/* <p className='mb-7 mt-3 text-xl text-gray-200'>
-            Cover a distance by <span className="text-cyan-400">huddle</span> ❤️
-          </p> */}
           <p className='mb-7 mt-3 text-xl text-gray-200'>
             Cover a distance by <span className="text-cyan-400">huddle</span> ❤️
           </p>

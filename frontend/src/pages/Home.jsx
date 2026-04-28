@@ -192,7 +192,6 @@ function Home() {
 								<p className="text-sm text-white/70">
 									Share the invite link with others to join the meeting.
 								</p>
-								{/* Link */}
 								<div className="w-fit">
 									<input
 										value={inviteLink}
@@ -220,7 +219,6 @@ function Home() {
 									</button>
 								</div>
 
-								{/* QR */}
 								<div className="bg-white p-2 rounded w-39">
 								<QRCodeSVG value={inviteLink} size={140}/>
 								</div>

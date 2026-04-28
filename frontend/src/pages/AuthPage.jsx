@@ -15,11 +15,11 @@ const AuthPage = () => {
 		<div className="relative min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_20%_10%,#16263a_0%,#0b1117_45%,#090e14_100%)] px-4 py-8">
 			<div className="pointer-events-none absolute h-64 w-64 rounded-full bg-sky-600/10 blur-3xl top-10 left-8" />
 			<div className="pointer-events-none absolute h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl bottom-10 right-10" />
-			<img src="auth-top.svg" className="hidden md:block absolute w-55 -top-3 -translate-x-1/2 left-1/2 z-5" alt="" />
-			<img src="auth-right.svg" className="hidden lg:block absolute w-55 right-7 z--1" alt="" />
-			<img src="auth-left.svg" className="hidden lg:block absolute w-70 left-7 z--1" alt="" />
+			<img src="auth-right.svg" className="hidden lg:block absolute w-55 right-10 z--1" alt="" />
+			<img src="auth-left.svg" className="hidden lg:block absolute w-70 left-10 z--1" alt="" />
 
-			<div className="relative w-full md:mt-20 max-w-md md:max-w-3xl bg-[#111827]/95 border border-[#263142] rounded-2xl overflow-hidden shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
+			<div className="relative w-full md:mt-20 max-w-md md:max-w-3xl bg-[#111827]/95 border border-[#263142] rounded-2xl shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
+			<img src="auth-top.svg" className="hidden md:block absolute w-55 -top-45  -translate-x-1/2 left-1/2 z-50" alt="" />
 				<div className="absolute top-0 left-0 h-[2px] w-full bg-gradient-to-r from-transparent via-sky-400/70 to-transparent" />
 				<div className="relative flex flex-col md:flex-row md:h-[420px]">
 					<div className="w-full md:w-1/2 h-auto md:h-full">
